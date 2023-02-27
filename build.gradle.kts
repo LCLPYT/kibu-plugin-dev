@@ -4,7 +4,7 @@ plugins {
     id("java")
     id("java-gradle-plugin")
     id("maven-publish")
-    //id("gradle-build-utils")
+    id("gradle-build-utils").version("1.1.0")
 }
 
 repositories {
@@ -20,16 +20,16 @@ tasks.getByName<Test>("test") {
     useJUnitPlatform()
 }
 
-//val loadProperties: groovy.lang.Closure<java.util.Properties> by extra
-//val gitVersion: groovy.lang.Closure<String> by extra
+val loadProperties: groovy.lang.Closure<Properties> by extra
+val gitVersion: groovy.lang.Closure<String> by extra
 val mavenGroup: String by project
 val mavenArchivesName: String by project
-val props = Properties()  //loadProperties("publish.properties")
+val props = loadProperties("publish.properties")
 
 base {
     group = mavenGroup
     archivesName.set(mavenArchivesName)
-    version = "0.1.0"
+    version = gitVersion.call()
 }
 
 java {
