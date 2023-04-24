@@ -11,6 +11,7 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.tasks.TaskContainer;
 import org.gradle.api.tasks.bundling.AbstractArchiveTask;
+import work.lclpnet.kibupd.util.ProjectUtils;
 
 import java.io.File;
 import java.util.Collections;
@@ -56,7 +57,13 @@ public class KibuShadowGradlePlugin implements Plugin<Project> {
             task.getInputFile().convention(shadowJarTask.getArchiveFile());
         });
 
-        tasks.named(BasePlugin.ASSEMBLE_TASK_NAME).configure(task -> task.dependsOn(remapShadowJarTask));
+        ProjectUtils.onEvaluationSuccess(target, () -> {
+            if (bundle.isEmpty()) {
+                remapShadowJarTask.setEnabled(false);
+            } else {
+                tasks.named(BasePlugin.ASSEMBLE_TASK_NAME).configure(task -> task.dependsOn(remapShadowJarTask));
+            }
+        });
     }
 
     private static String getProjectNameAsPackage(Project target) {

@@ -7,6 +7,7 @@ import org.gradle.api.plugins.PluginContainer;
 import org.gradle.api.tasks.TaskContainer;
 import work.lclpnet.kibupd.task.DeployLocalTask;
 import work.lclpnet.kibupd.task.DeployTask;
+import work.lclpnet.kibupd.util.ProjectUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,6 +18,7 @@ import java.util.Properties;
 public class KibuGradlePlugin implements Plugin<Project> {
 
     public static final String TASK_GROUP = "kibu";
+    public static final String SHADOW_PLUGIN_ID = "com.github.johnrengelman.shadow";
 
     private Properties properties;
 
@@ -39,9 +41,7 @@ public class KibuGradlePlugin implements Plugin<Project> {
         PluginContainer plugins = target.getPlugins();
         plugins.withId("fabric-loom", loomPlugin -> loomReady(target));
 
-        target.afterEvaluate(project -> {
-            if (project.getState().getFailure() != null) return;
-
+        ProjectUtils.onEvaluationSuccess(target, () -> {
             if (!plugins.hasPlugin("fabric-loom")) {
                 target.getLogger().warn("The 'fabric-loom' gradle plugin is not applied");
             }
@@ -49,7 +49,7 @@ public class KibuGradlePlugin implements Plugin<Project> {
     }
 
     private void loomReady(Project target) {
-        target.getPlugins().withId("com.github.johnrengelman.shadow", shadowPlugin -> shadowReady(target));
+        target.getPlugins().withId(SHADOW_PLUGIN_ID, shadowPlugin -> shadowReady(target));
     }
 
     private void shadowReady(Project target) {

@@ -3,11 +3,13 @@ package work.lclpnet.kibupd.task;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.api.tasks.TaskProvider;
 import work.lclpnet.kibupd.KibuGradlePlugin;
+import work.lclpnet.kibupd.KibuShadowGradlePlugin;
 import work.lclpnet.kibupd.deploy.*;
 
 import java.io.File;
@@ -22,6 +24,11 @@ import java.util.stream.Collectors;
 
 public class DeployTask extends DefaultTask {
 
+    public DeployTask() {
+        super();
+        dependsOn(getDeployArtifactTask());
+    }
+
     @TaskAction
     public void execute() throws IOException {
         final Project project = this.getProject();
@@ -33,7 +40,8 @@ public class DeployTask extends DefaultTask {
 
         if (!Files.exists(target)) Files.createDirectories(target);
 
-        ArtifactCollector collector = () -> getTaskOutputs(remapped ? "remapJar" : "jar").stream();
+        Task deployArtifactTask = getDeployArtifactTask();
+        ArtifactCollector collector = () -> getTaskOutputs(deployArtifactTask).stream();
         TargetMapper targetMapper = p -> target.resolve(p.getFileName());
         FileTransfer transfer = new StreamFileTransfer(projectPath, logger);
 
@@ -46,6 +54,40 @@ public class DeployTask extends DefaultTask {
         final Properties props = KibuGradlePlugin.getProperties(this.getProject());
 
         return Boolean.parseBoolean(props.getProperty("deployRemapped", "true"));
+    }
+
+    protected boolean shouldDeployBundled() {
+        final Project project = getProject();
+        final Properties props = KibuGradlePlugin.getProperties(project);
+
+        if (!Boolean.parseBoolean(props.getProperty("deployBundled", "true"))) return false;
+
+        if (!project.getPlugins().hasPlugin(KibuGradlePlugin.SHADOW_PLUGIN_ID)) return false;
+
+        Configuration bundle = project.getConfigurations().findByName(KibuShadowGradlePlugin.BUNDLE_CONFIGURATION_NAME);
+        if (bundle == null) return false;
+
+        return !bundle.isEmpty();
+    }
+
+    protected String getDeployArtifactTaskName() {
+        boolean remap = shouldDeployRemapped();
+
+        if (shouldDeployBundled()) {
+            return remap ? "remapShadowJar" : "shadowJar";
+        }
+
+        return remap ? "remapJar" : "jar";
+    }
+
+    protected Task getDeployArtifactTask() {
+        String taskName = getDeployArtifactTaskName();
+        TaskProvider<Task> refTask = this.getProject().getTasks().named(taskName);
+
+        if (!refTask.isPresent())
+            throw new IllegalStateException(String.format("Task '%s' is not present", taskName));
+
+        return refTask.get();
     }
 
     @Internal
@@ -61,13 +103,8 @@ public class DeployTask extends DefaultTask {
         return project.getProjectDir().toPath().resolve(relDeployPath);
     }
 
-    private Set<Path> getTaskOutputs(String taskName) {
-        TaskProvider<Task> refTask = this.getProject().getTasks().named(taskName);
-
-        if (!refTask.isPresent())
-            throw new IllegalStateException(String.format("Task '%s' is not present", taskName));
-
-        return refTask.get().getOutputs().getFiles().getFiles().stream()
+    private Set<Path> getTaskOutputs(Task task) {
+        return task.getOutputs().getFiles().getFiles().stream()
                 .map(File::toPath)
                 .collect(Collectors.toSet());
     }
