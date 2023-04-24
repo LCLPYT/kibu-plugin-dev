@@ -1,17 +1,24 @@
-import java.util.Properties
+import java.util.*
 
 plugins {
     id("java")
     id("java-gradle-plugin")
     id("maven-publish")
-    id("gradle-build-utils").version("1.1.0")
+    id("gradle-build-utils").version("1.2.0")
 }
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
+
+    maven {
+        url = uri("https://maven.fabricmc.net/")
+    }
 }
 
 dependencies {
+    implementation("com.github.johnrengelman.shadow:com.github.johnrengelman.shadow.gradle.plugin:${project.properties["shadow_version"]}")
+    implementation("fabric-loom:fabric-loom.gradle.plugin:${project.properties["loom_version"]}")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")
 }
@@ -33,8 +40,8 @@ base {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 
     withSourcesJar()
 }

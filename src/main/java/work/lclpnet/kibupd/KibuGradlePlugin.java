@@ -1,8 +1,10 @@
 package work.lclpnet.kibupd;
 
+import net.fabricmc.loom.util.gradle.GradleUtils;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
+import org.gradle.api.plugins.PluginContainer;
 import org.gradle.api.tasks.TaskContainer;
 import work.lclpnet.kibupd.task.DeployLocalTask;
 import work.lclpnet.kibupd.task.DeployTask;
@@ -34,6 +36,23 @@ public class KibuGradlePlugin implements Plugin<Project> {
             task.setGroup(TASK_GROUP);
             task.dependsOn(tasks.named("build"));
         });
+
+        PluginContainer plugins = target.getPlugins();
+        plugins.withId("fabric-loom", loomPlugin -> loomReady(target));
+
+        GradleUtils.afterSuccessfulEvaluation(target, () -> {
+            if (!plugins.hasPlugin("fabric-loom")) {
+                target.getLogger().warn("The 'fabric-loom' gradle plugin is not applied");
+            }
+        });
+    }
+
+    private void loomReady(Project target) {
+        target.getPlugins().withId("com.github.johnrengelman.shadow", shadowPlugin -> shadowReady(target));
+    }
+
+    private void shadowReady(Project target) {
+        target.getPlugins().apply(KibuShadowGradlePlugin.class);
     }
 
     private Properties loadProps(Path path, Logger logger) {
