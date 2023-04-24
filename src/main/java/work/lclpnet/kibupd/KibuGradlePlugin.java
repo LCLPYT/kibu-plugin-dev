@@ -28,15 +28,9 @@ public class KibuGradlePlugin implements Plugin<Project> {
 
         TaskContainer tasks = target.getTasks();
 
-        tasks.register("deploy", DeployTask.class, task -> {
-            task.setGroup(TASK_GROUP);
-            task.dependsOn(tasks.named("build"));
-        });
+        tasks.register("deploy", DeployTask.class, task -> task.setGroup(TASK_GROUP));
 
-        tasks.register("deployLocal", DeployLocalTask.class, task -> {
-            task.setGroup(TASK_GROUP);
-            task.dependsOn(tasks.named("build"));
-        });
+        tasks.register("deployLocal", DeployLocalTask.class, task -> task.setGroup(TASK_GROUP));
 
         PluginContainer plugins = target.getPlugins();
         plugins.withId("fabric-loom", loomPlugin -> loomReady(target));

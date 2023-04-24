@@ -70,6 +70,7 @@ public class DeployTask extends DefaultTask {
         return !bundle.isEmpty();
     }
 
+    @Internal
     protected String getDeployArtifactTaskName() {
         boolean remap = shouldDeployRemapped();
 
@@ -80,6 +81,7 @@ public class DeployTask extends DefaultTask {
         return remap ? "remapJar" : "jar";
     }
 
+    @Internal
     protected Task getDeployArtifactTask() {
         String taskName = getDeployArtifactTaskName();
         TaskProvider<Task> refTask = this.getProject().getTasks().named(taskName);
