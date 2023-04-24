@@ -1,6 +1,5 @@
 package work.lclpnet.kibupd;
 
-import net.fabricmc.loom.util.gradle.GradleUtils;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
@@ -40,7 +39,9 @@ public class KibuGradlePlugin implements Plugin<Project> {
         PluginContainer plugins = target.getPlugins();
         plugins.withId("fabric-loom", loomPlugin -> loomReady(target));
 
-        GradleUtils.afterSuccessfulEvaluation(target, () -> {
+        target.afterEvaluate(project -> {
+            if (project.getState().getFailure() != null) return;
+
             if (!plugins.hasPlugin("fabric-loom")) {
                 target.getLogger().warn("The 'fabric-loom' gradle plugin is not applied");
             }
