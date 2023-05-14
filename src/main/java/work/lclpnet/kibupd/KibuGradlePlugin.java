@@ -19,6 +19,7 @@ public class KibuGradlePlugin implements Plugin<Project> {
 
     public static final String TASK_GROUP = "kibu";
     public static final String SHADOW_PLUGIN_ID = "com.github.johnrengelman.shadow";
+    public static final String LOOM_PLUGIN_ID = "fabric-loom";
 
     private Properties properties;
 
@@ -28,22 +29,25 @@ public class KibuGradlePlugin implements Plugin<Project> {
 
         TaskContainer tasks = target.getTasks();
 
-        tasks.register("deploy", DeployTask.class, task -> task.setGroup(TASK_GROUP));
+        tasks.register("deploy", DeployTask.class);
 
-        tasks.register("deployLocal", DeployLocalTask.class, task -> task.setGroup(TASK_GROUP));
+        tasks.register("deployLocal", DeployLocalTask.class);
 
         PluginContainer plugins = target.getPlugins();
         plugins.withId("fabric-loom", loomPlugin -> loomReady(target));
 
         ProjectUtils.onEvaluationSuccess(target, () -> {
-            if (!plugins.hasPlugin("fabric-loom")) {
+            if (!plugins.hasPlugin(LOOM_PLUGIN_ID)) {
                 target.getLogger().warn("The 'fabric-loom' gradle plugin is not applied");
             }
         });
     }
 
     private void loomReady(Project target) {
-        target.getPlugins().withId(SHADOW_PLUGIN_ID, shadowPlugin -> shadowReady(target));
+        PluginContainer plugins = target.getPlugins();
+        plugins.apply(KibuLoomGradlePlugin.class);
+
+        plugins.withId(SHADOW_PLUGIN_ID, shadowPlugin -> shadowReady(target));
     }
 
     private void shadowReady(Project target) {

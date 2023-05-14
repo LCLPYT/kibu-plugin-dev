@@ -36,7 +36,9 @@ val props = loadProperties("publish.properties")
 base {
     group = mavenGroup
     archivesName.set(mavenArchivesName)
-    version = gitVersion.call()
+
+    val local = System.getProperty("build.local") == "true"
+    version = gitVersion.call() + if (local) "+local" else ""
 }
 
 java {

@@ -27,6 +27,7 @@ public class DeployTask extends DefaultTask {
     public DeployTask() {
         super();
         dependsOn(getDeployArtifactTask());
+        setGroup(KibuGradlePlugin.TASK_GROUP);
     }
 
     @TaskAction
