@@ -37,7 +37,7 @@ public abstract class PluginPathsConfigTask extends DefaultTask {
         // TODO add dependency plugins to pluginPaths as well
 
         Map<String, Object> map = new HashMap<>();
-        map.put("paths", pluginPaths);
+        map.put("plugin_paths", pluginPaths);
 
         final String json = new JsonBuilder(map).toPrettyString();
         final Path config = getOutputFile().get().getAsFile().toPath();

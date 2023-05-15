@@ -31,7 +31,7 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
 
         final var generatePluginPathsConfig = tasks.register("generatePluginPathsConfig", PluginPathsConfigTask.class, task -> {
             Path configPath = target.getProjectDir().toPath().resolve(".gradle").resolve("kibu-dev")
-                    .resolve("plugin-paths.json");
+                    .resolve("config.json");
 
             task.getOutputFile().set(configPath.toFile());
         }).get();
