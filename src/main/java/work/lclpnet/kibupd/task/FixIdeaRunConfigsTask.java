@@ -18,10 +18,17 @@ import javax.xml.transform.stream.StreamSource;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-public abstract class FixRunClasspathTask extends DefaultTask {
+public abstract class FixIdeaRunConfigsTask extends DefaultTask {
+
+    private static String joinVmOption(Map.Entry<String, String> prop) {
+        return "-D%s=%s".formatted(prop.getKey(), prop.getValue());
+    }
 
     @InputFiles
     public abstract ConfigurableFileCollection getInputFiles();
@@ -29,8 +36,14 @@ public abstract class FixRunClasspathTask extends DefaultTask {
     @InputFiles
     public abstract ConfigurableFileCollection getClasspathExcludes();
 
-    public FixRunClasspathTask() {
+    private final Map<String, String> systemProperties = new HashMap<>();
+
+    public FixIdeaRunConfigsTask() {
         setGroup(KibuGradlePlugin.TASK_GROUP);
+    }
+
+    public void systemProperty(String key, String value) {
+        systemProperties.put(key, value);
     }
 
     @TaskAction
@@ -84,12 +97,30 @@ public abstract class FixRunClasspathTask extends DefaultTask {
         final NodeList childNodes = configuration.getChildNodes();
 
         Node classpathModifications = null;
+        Node vmParams = null;
 
         for (int i = 0; i < childNodes.getLength(); i++) {
             Node child = childNodes.item(i);
-            if ("classpathModifications".equals(child.getNodeName())) {
-                classpathModifications = child;
-                break;
+
+            switch (child.getNodeName()) {
+                case "classpathModifications" -> {
+                    if (classpathModifications == null) {
+                        classpathModifications = child;
+                    }
+                }
+                case "option" -> {
+                    NamedNodeMap attributes = child.getAttributes();
+                    if (attributes == null) break;
+
+                    Node nameAttr = attributes.getNamedItem("name");
+                    if (nameAttr == null) break;
+
+                    String name = nameAttr.getTextContent();
+                    if ("VM_PARAMETERS".equals(name) && vmParams == null) {
+                        vmParams = child;
+                    }
+                }
+                default -> {}
             }
         }
 
@@ -99,6 +130,39 @@ public abstract class FixRunClasspathTask extends DefaultTask {
         }
 
         applyClassPathModifications(document, classpathModifications);
+
+        if (vmParams == null) {
+            Element optionElement = document.createElement("option");
+            optionElement.setAttribute("name", "VM_PARAMETERS");
+            vmParams = optionElement;
+            configuration.appendChild(vmParams);
+        }
+
+        adjustVmParam((Element) vmParams);
+    }
+
+    private void adjustVmParam(Element vmParams) {
+        NamedNodeMap attributes = vmParams.getAttributes();
+        Node valueAttr = attributes.getNamedItem("value");
+
+        if (valueAttr == null) {
+            String value = systemProperties.entrySet().stream()
+                    .map(FixIdeaRunConfigsTask::joinVmOption)
+                    .collect(Collectors.joining(" "));
+
+            vmParams.setAttribute("value", value);
+        } else {
+            final String currentValue = valueAttr.getTextContent().trim();
+
+            String append = systemProperties.entrySet().stream()
+                    .filter(entry -> !currentValue.contains("-D%s=".formatted(entry.getKey())))
+                    .map(FixIdeaRunConfigsTask::joinVmOption)
+                    .collect(Collectors.joining(" "));
+
+            if (append.isEmpty()) return;
+
+            valueAttr.setTextContent("%s %s".formatted(currentValue, append));
+        }
     }
 
     private void applyClassPathModifications(Document document, Node classpathModifications) {

@@ -15,7 +15,7 @@ import org.gradle.api.tasks.SourceSetOutput;
 import org.gradle.api.tasks.TaskContainer;
 import work.lclpnet.kibupd.ext.KibuGradleExtension;
 import work.lclpnet.kibupd.ext.KibuGradleExtensionImpl;
-import work.lclpnet.kibupd.task.FixRunClasspathTask;
+import work.lclpnet.kibupd.task.FixIdeaRunConfigsTask;
 import work.lclpnet.kibupd.task.KibuDevConfigTask;
 
 import java.io.File;
@@ -36,7 +36,7 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
         final TaskContainer tasks = target.getTasks();
 
         final var generateKibuDevConfig = tasks.register("generateKibuDevConfig", KibuDevConfigTask.class);
-        final var fixIdeaRunClasspath = tasks.register("fixIdeaRunClasspath", FixRunClasspathTask.class);
+        final var fixIdeaRunClasspath = tasks.register("fixIdeaRunConfigs", FixIdeaRunConfigsTask.class);
         final var configurePluginLaunch = tasks.register("configurePluginLaunch");
         final var ideaSyncTask = tasks.named("ideaSyncTask");
 
@@ -60,7 +60,12 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
             configurePluginLaunch.get().mustRunAfter(task);
         });
 
-        fixIdeaRunClasspath.configure(task -> task.dependsOn(ideaSyncTask));
+        fixIdeaRunClasspath.configure(task -> {
+            task.dependsOn(ideaSyncTask);
+
+            final RegularFileProperty kibuDevConfig = generateKibuDevConfig.get().getOutputFile();
+            task.systemProperty("kibu-dev.config", kibuDevConfig.get().getAsFile().getAbsolutePath());
+        });
 
         sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME).configure(main -> {
             // remove all sourceSet outputs from the main runtime classpath
@@ -76,16 +81,16 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
             Set<File> mainOutputFiles = main.getOutput().getFiles();
             fixIdeaRunClasspath.get().getClasspathExcludes().from(mainOutputFiles);
 
-            final RegularFileProperty kibuDevConfig = generateKibuDevConfig.get().getOutputFile();
-
-            // configure run game tasks to contain paths to plugin sources
-            tasks.withType(RunGameTask.class).forEach(task -> {
-                task.dependsOn(generateKibuDevConfig);
-                task.systemProperty("kibu-dev.config", kibuDevConfig);
-            });
-
             // configure plugin file paths of the target project
             ext.getPluginPaths().from(mainOutputFiles);
+        });
+
+        // configure run game tasks to contain paths to plugin sources
+        tasks.withType(RunGameTask.class).forEach(task -> {
+            task.dependsOn(generateKibuDevConfig);
+
+            final RegularFileProperty kibuDevConfig = generateKibuDevConfig.get().getOutputFile();
+            task.systemProperty("kibu-dev.config", kibuDevConfig);
         });
 
         GradleUtils.afterSuccessfulEvaluation(target, () -> {
