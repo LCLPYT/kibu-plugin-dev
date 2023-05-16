@@ -5,7 +5,6 @@ import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.plugins.PluginContainer;
 import org.gradle.api.tasks.TaskContainer;
-import work.lclpnet.kibupd.task.DeployLocalTask;
 import work.lclpnet.kibupd.task.DeployTask;
 import work.lclpnet.kibupd.util.ProjectUtils;
 
@@ -30,8 +29,6 @@ public class KibuGradlePlugin implements Plugin<Project> {
         TaskContainer tasks = target.getTasks();
 
         tasks.register("deploy", DeployTask.class);
-
-        tasks.register("deployLocal", DeployLocalTask.class);
 
         PluginContainer plugins = target.getPlugins();
         plugins.withId("fabric-loom", loomPlugin -> loomReady(target));
