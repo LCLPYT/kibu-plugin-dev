@@ -43,6 +43,10 @@ public abstract class FixIdeaRunConfigsTask extends DefaultTask {
     }
 
     public void systemProperty(String key, String value) {
+        if (value.contains(" ")) {
+            value = "\"" + value + "\"";
+        }
+
         systemProperties.put(key, value);
     }
 
