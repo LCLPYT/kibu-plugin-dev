@@ -105,8 +105,6 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
                     .map(File::getAbsolutePath)
                     .forEach(pluginPaths::from);
 
-            // TODO add dependency plugins to pluginPaths as well
-
             // gather run configs (must be done after project evaluation, as minecraftJarConfiguration is set during it
             final LoomGradleExtension extension = LoomGradleExtension.get(target);
             final MinecraftJarConfiguration conf = extension.getMinecraftJarConfiguration().get();

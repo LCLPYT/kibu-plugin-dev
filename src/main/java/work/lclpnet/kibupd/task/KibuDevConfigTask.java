@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -33,12 +34,17 @@ public abstract class KibuDevConfigTask extends DefaultTask {
 
     @TaskAction
     public void execute() {
-        Set<String> paths = getPluginPaths().getFiles().stream()
+        Set<String> projectPluginPaths = getPluginPaths().getFiles().stream()
                 .map(File::getAbsolutePath)
                 .collect(Collectors.toSet());
 
+        Set<Set<String>> pluginPaths = new HashSet<>();
+        pluginPaths.add(projectPluginPaths);  // all paths of the plugin built by the consumer project
+
+        // TODO add dependency plugins to pluginPaths as well
+
         Map<String, Object> map = new HashMap<>();
-        map.put("plugin_paths", paths);
+        map.put("plugin_paths", pluginPaths);
 
         final String json = new JsonBuilder(map).toPrettyString();
         final Path config = getOutputFile().get().getAsFile().toPath();
