@@ -5,6 +5,8 @@ import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.plugins.PluginContainer;
 import org.gradle.api.tasks.TaskContainer;
+import work.lclpnet.kibupd.ext.KibuGradleExtension;
+import work.lclpnet.kibupd.ext.KibuGradleExtensionImpl;
 import work.lclpnet.kibupd.task.DeployTask;
 import work.lclpnet.kibupd.util.ProjectUtils;
 
@@ -24,6 +26,8 @@ public class KibuGradlePlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project target) {
+        target.getExtensions().create(KibuGradleExtension.class, "kibu", KibuGradleExtensionImpl.class, target);
+
         properties = loadProps(target.file("mplugindev.properties").toPath(), target.getLogger());
 
         TaskContainer tasks = target.getTasks();

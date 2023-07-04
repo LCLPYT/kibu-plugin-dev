@@ -14,7 +14,6 @@ import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.SourceSetOutput;
 import org.gradle.api.tasks.TaskContainer;
 import work.lclpnet.kibupd.ext.KibuGradleExtension;
-import work.lclpnet.kibupd.ext.KibuGradleExtensionImpl;
 import work.lclpnet.kibupd.task.FixIdeaRunConfigsTask;
 import work.lclpnet.kibupd.task.KibuDevConfigTask;
 
@@ -29,8 +28,7 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project target) {
-        final KibuGradleExtension ext = target.getExtensions().create(KibuGradleExtension.class,
-                "kibu", KibuGradleExtensionImpl.class, target);
+        final KibuGradleExtension ext = target.getExtensions().getByType(KibuGradleExtension.class);
 
         final SourceSetContainer sourceSets = target.getExtensions().getByType(SourceSetContainer.class);
         final TaskContainer tasks = target.getTasks();

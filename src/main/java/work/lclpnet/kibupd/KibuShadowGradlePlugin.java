@@ -12,8 +12,10 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.tasks.TaskContainer;
 import org.gradle.api.tasks.bundling.AbstractArchiveTask;
+import work.lclpnet.kibupd.ext.KibuGradleExtension;
 import work.lclpnet.kibupd.util.ProjectUtils;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
 
@@ -25,6 +27,8 @@ public class KibuShadowGradlePlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project target) {
+        final KibuGradleExtension ext = target.getExtensions().getByType(KibuGradleExtension.class);
+
         Configuration bundle = target.getConfigurations().create(BUNDLE_CONFIGURATION_NAME);
         TaskContainer tasks = target.getTasks();
 
@@ -34,9 +38,6 @@ public class KibuShadowGradlePlugin implements Plugin<Project> {
 
             ShadowJar shadowJar = tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME, ShadowJar.class).get();
             task.setTarget(shadowJar);
-
-            String escaped = getProjectNameAsPackage(target);
-            task.setPrefix(escaped);
         });
 
         // configure shadowJar task
@@ -61,6 +62,9 @@ public class KibuShadowGradlePlugin implements Plugin<Project> {
         });
 
         ProjectUtils.onEvaluationSuccess(target, () -> {
+            String escaped = getNameAsPackage(ext.getAppBundleName().get());
+            relocateDepsTask.setPrefix(escaped);
+
             if (bundle.isEmpty()) {
                 remapShadowJarTask.setEnabled(false);
                 tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME, AbstractArchiveTask.class).configure(task -> task.setEnabled(false));
@@ -78,9 +82,8 @@ public class KibuShadowGradlePlugin implements Plugin<Project> {
         });
     }
 
-    private static String getProjectNameAsPackage(Project target) {
-        String name = target.getName();
-        name = name.replaceAll("[^a-z_.0-9]", "");
+    private static String getNameAsPackage(@Nullable String name) {
+        name = (name != null ? name : "").replaceAll("[^a-z_.0-9]", "");
 
         if (name.isEmpty()) return "app";
 
