@@ -4,7 +4,7 @@ plugins {
     id("java")
     id("java-gradle-plugin")
     id("maven-publish")
-    id("gradle-build-utils").version("1.2.0")
+    id("gradle-build-utils").version("1.5.3")
 }
 
 repositories {
@@ -27,18 +27,15 @@ tasks.getByName<Test>("test") {
     useJUnitPlatform()
 }
 
-val loadProperties: groovy.lang.Closure<Properties> by extra
-val gitVersion: groovy.lang.Closure<String> by extra
 val mavenGroup: String by project
 val mavenArchivesName: String by project
-val props = loadProperties("publish.properties")
+val props: Properties = buildUtils.loadProperties("publish.properties")
 
 base {
     group = mavenGroup
     archivesName.set(mavenArchivesName)
 
-    val local = System.getProperty("build.local") == "true"
-    version = gitVersion.call() + if (local) "+local" else ""
+    version = buildUtils.gitVersion()
 }
 
 java {
@@ -58,25 +55,5 @@ gradlePlugin {
 }
 
 publishing {
-    repositories {
-        maven {
-            val env = System.getenv()
-            if (listOf("DEPLOY_URL", "DEPLOY_USER", "DEPLOY_PASSWORD").all(env::containsKey)) {
-                credentials {
-                    username = env["DEPLOY_USER"]
-                    password = env["DEPLOY_PASSWORD"]
-                }
-                url = uri(env["DEPLOY_URL"]!!)
-            }
-            else if (listOf("mavenHost", "mavenUser", "mavenPassword").all(props::containsKey)) {
-                credentials {
-                    username = props.getProperty("mavenUser")
-                    password = props.getProperty("mavenPassword")
-                }
-                url = uri(props.getProperty("mavenHost")!!)
-            } else {
-                url = uri("file:///${project.projectDir}/repo")
-            }
-        }
-    }
+    buildUtils.setupPublishRepository(repositories, props)
 }

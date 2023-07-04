@@ -53,6 +53,10 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
                     .resolve("config.json");
 
             task.getOutputFile().set(configPath.toFile());
+
+            ConfigurableFileCollection pluginPaths = task.getPluginPaths();
+            SourceSetOutput mainOutput = sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME).get().getOutput();
+            pluginPaths.from(mainOutput.getFiles());
         });
 
         ideaSyncTask.configure(task -> {
@@ -94,6 +98,15 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
         });
 
         GradleUtils.afterSuccessfulEvaluation(target, () -> {
+            // collect configured plugin paths and configure the kibu config task
+            ConfigurableFileCollection pluginPaths = generateKibuDevConfig.get().getPluginPaths();
+
+            ext.getPluginPaths().getFiles().stream()
+                    .map(File::getAbsolutePath)
+                    .forEach(pluginPaths::from);
+
+            // TODO add dependency plugins to pluginPaths as well
+
             // gather run configs (must be done after project evaluation, as minecraftJarConfiguration is set during it
             final LoomGradleExtension extension = LoomGradleExtension.get(target);
             final MinecraftJarConfiguration conf = extension.getMinecraftJarConfiguration().get();
