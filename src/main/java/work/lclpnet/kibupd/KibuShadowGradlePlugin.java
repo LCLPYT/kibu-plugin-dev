@@ -22,6 +22,7 @@ import java.util.Collections;
 public class KibuShadowGradlePlugin implements Plugin<Project> {
 
     public static final String BUNDLE_CONFIGURATION_NAME = "bundle";
+    public static final String PROVIDE_CONFIGURATION_NAME = "provide";
     public static final String REMAP_SHADOW_JAR_TASK_NAME = "remapShadowJar";
     public static final String REMAP_RELOCATE_DEPS_TASK_NAME = "relocateDeps";
 
@@ -29,7 +30,9 @@ public class KibuShadowGradlePlugin implements Plugin<Project> {
     public void apply(Project target) {
         final KibuGradleExtension ext = target.getExtensions().getByType(KibuGradleExtension.class);
 
-        Configuration bundle = target.getConfigurations().create(BUNDLE_CONFIGURATION_NAME);
+        Configuration bundle = target.getConfigurations().create(BUNDLE_CONFIGURATION_NAME, config -> config.setTransitive(false));
+        Configuration provide = target.getConfigurations().create(PROVIDE_CONFIGURATION_NAME, config -> config.setTransitive(false));
+
         TaskContainer tasks = target.getTasks();
 
         // add relocateDeps task
@@ -47,6 +50,8 @@ public class KibuShadowGradlePlugin implements Plugin<Project> {
             task.getArchiveClassifier().set("dev-bundle");
             task.getDestinationDirectory().set(devlibsDir);
             task.dependsOn(relocateDepsTask);
+
+            task.from(provide);
         });
 
         // register remapShadowJar task
@@ -65,7 +70,7 @@ public class KibuShadowGradlePlugin implements Plugin<Project> {
             String escaped = getNameAsPackage(ext.getAppBundleName().get());
             relocateDepsTask.setPrefix(escaped);
 
-            if (bundle.isEmpty()) {
+            if (bundle.isEmpty() && provide.isEmpty()) {
                 remapShadowJarTask.setEnabled(false);
                 tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME, AbstractArchiveTask.class).configure(task -> task.setEnabled(false));
             } else {
