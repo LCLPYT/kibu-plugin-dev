@@ -13,6 +13,7 @@ import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.SourceSetOutput;
 import org.gradle.api.tasks.TaskContainer;
+import org.gradle.jvm.tasks.Jar;
 import work.lclpnet.kibupd.ext.KibuGradleExtension;
 import work.lclpnet.kibupd.task.FixIdeaRunConfigsTask;
 import work.lclpnet.kibupd.task.KibuDevConfigTask;
@@ -22,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class KibuLoomGradlePlugin implements Plugin<Project> {
@@ -132,6 +134,10 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
                     .filter(Files::isRegularFile)
                     .map(Path::toFile)
                     .forEach(inputFiles::from);
+
+            // set remap attribute to produced jars, so that they will be remapped in consumer dev environments
+            tasks.withType(Jar.class).configureEach(task ->
+                    task.manifest(manifest -> manifest.attributes(Map.of("Fabric-Loom-Remap", "true"))));
         });
     }
 }
