@@ -70,6 +70,8 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
         });
 
         sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME).configure(main -> {
+            ext.createPluginConfigurations(main);
+
             // remove all sourceSet outputs from the main runtime classpath
             // the outputs will be loaded by the plugin loader instead
             for (SourceSet sourceSet : sourceSets) {
@@ -97,11 +99,15 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
 
         GradleUtils.afterSuccessfulEvaluation(target, () -> {
             // collect configured plugin paths and configure the kibu config task
-            ConfigurableFileCollection pluginPaths = generateKibuDevConfig.get().getPluginPaths();
+            KibuDevConfigTask kibuDevConfigTask = generateKibuDevConfig.get();
+            ConfigurableFileCollection pluginPaths = kibuDevConfigTask.getPluginPaths();
 
             ext.getPluginPaths().getFiles().stream()
                     .map(File::getAbsolutePath)
                     .forEach(pluginPaths::from);
+
+            // collected plugin dependencies and configure kibu config task
+            kibuDevConfigTask.getPluginDependencies().from(ext.getPluginDependencies());
 
             // gather run configs (must be done after project evaluation, as minecraftJarConfiguration is set during it
             final LoomGradleExtension extension = LoomGradleExtension.get(target);

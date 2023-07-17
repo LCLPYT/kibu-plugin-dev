@@ -25,6 +25,9 @@ public abstract class KibuDevConfigTask extends DefaultTask {
     @InputFiles
     public abstract ConfigurableFileCollection getPluginPaths();
 
+    @InputFiles
+    public abstract ConfigurableFileCollection getPluginDependencies();
+
     @OutputFile
     public abstract RegularFileProperty getOutputFile();
 
@@ -41,7 +44,12 @@ public abstract class KibuDevConfigTask extends DefaultTask {
         Set<Set<String>> pluginPaths = new HashSet<>();
         pluginPaths.add(projectPluginPaths);  // all paths of the plugin built by the consumer project
 
-        // TODO add dependency plugins to pluginPaths as well
+        // add each plugin dependency as an own entry
+        Set<File> pluginDependencies = getPluginDependencies().getFiles();
+
+        for (File pluginDependency : pluginDependencies) {
+            pluginPaths.add(Set.of(pluginDependency.getAbsolutePath()));
+        }
 
         Map<String, Object> map = new HashMap<>();
         map.put("plugin_paths", pluginPaths);

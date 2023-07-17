@@ -14,11 +14,16 @@ repositories {
     maven {
         url = uri("https://maven.fabricmc.net/")
     }
+
+    maven {
+        url = uri("https://repo.lclpnet.work/repository/internal")
+    }
 }
 
 dependencies {
     implementation("com.github.johnrengelman.shadow:com.github.johnrengelman.shadow.gradle.plugin:${project.properties["shadow_version"]}")
     implementation("fabric-loom:fabric-loom.gradle.plugin:${project.properties["loom_version"]}")
+    implementation("work.lclpnet:plugins4j:${project.properties["plugins4j_version"]}")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")
 }
