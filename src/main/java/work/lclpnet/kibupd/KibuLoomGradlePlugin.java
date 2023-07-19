@@ -6,6 +6,7 @@ import net.fabricmc.loom.task.RunGameTask;
 import net.fabricmc.loom.util.gradle.GradleUtils;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.RegularFileProperty;
@@ -49,6 +50,19 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
 
         // configure kibu dev config path
         generateKibuDevConfig.configure(task -> {
+            for (SourceSet sourceSet : sourceSets) {
+                Task compileJava = tasks.findByName(sourceSet.getCompileJavaTaskName());
+                Task processResources = tasks.findByName(sourceSet.getProcessResourcesTaskName());
+
+                if (compileJava != null) {
+                    task.mustRunAfter(compileJava);
+                }
+
+                if (processResources != null) {
+                    task.mustRunAfter(processResources);
+                }
+            }
+
             Path configPath = target.getProjectDir().toPath().resolve(".gradle").resolve("kibu-dev")
                     .resolve("config.json");
 
@@ -77,10 +91,10 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
             // remove all sourceSet outputs from the main runtime classpath
             // the outputs will be loaded by the plugin loader instead
             for (SourceSet sourceSet : sourceSets) {
-                FileCollection compileClasspath = main.getCompileClasspath();
+                FileCollection mainRuntime = main.getRuntimeClasspath();
                 SourceSetOutput output = sourceSet.getOutput();
 
-                compileClasspath.minus(output);
+                main.setRuntimeClasspath(mainRuntime.minus(output));
             }
 
             // exclude main outputs in the classpath of the run config
@@ -95,8 +109,8 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
         tasks.withType(RunGameTask.class).forEach(task -> {
             task.dependsOn(generateKibuDevConfig);
 
-            final RegularFileProperty kibuDevConfig = generateKibuDevConfig.get().getOutputFile();
-            task.systemProperty("kibu-dev.config", kibuDevConfig);
+            final File kibuDevConfig = generateKibuDevConfig.get().getOutputFile().get().getAsFile();
+            task.systemProperty("kibu-dev.config", kibuDevConfig.getAbsolutePath());
         });
 
         GradleUtils.afterSuccessfulEvaluation(target, () -> {

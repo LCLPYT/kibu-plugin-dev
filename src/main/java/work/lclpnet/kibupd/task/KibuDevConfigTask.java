@@ -37,9 +37,13 @@ public abstract class KibuDevConfigTask extends DefaultTask {
 
     @TaskAction
     public void execute() {
+        System.out.println("FLAG");
+
         Set<String> projectPluginPaths = getPluginPaths().getFiles().stream()
                 .map(File::getAbsolutePath)
                 .collect(Collectors.toSet());
+
+        System.out.println(projectPluginPaths);
 
         Set<Set<String>> pluginPaths = new HashSet<>();
         pluginPaths.add(projectPluginPaths);  // all paths of the plugin built by the consumer project
