@@ -10,10 +10,7 @@ import org.gradle.api.Task;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.tasks.SourceSet;
-import org.gradle.api.tasks.SourceSetContainer;
-import org.gradle.api.tasks.SourceSetOutput;
-import org.gradle.api.tasks.TaskContainer;
+import org.gradle.api.tasks.*;
 import org.gradle.jvm.tasks.Jar;
 import work.lclpnet.kibupd.ext.KibuGradleExtension;
 import work.lclpnet.kibupd.task.FixIdeaRunConfigsTask;
@@ -22,10 +19,7 @@ import work.lclpnet.kibupd.task.KibuDevConfigTask;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class KibuLoomGradlePlugin implements Plugin<Project> {
 
@@ -88,21 +82,9 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
         sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME).configure(main -> {
             ext.createPluginConfigurations(main);
 
-            // remove all sourceSet outputs from the main runtime classpath
-            // the outputs will be loaded by the plugin loader instead
-            for (SourceSet sourceSet : sourceSets) {
-                FileCollection mainRuntime = main.getRuntimeClasspath();
-                SourceSetOutput output = sourceSet.getOutput();
+            removePluginOutputFromGradleMainClasspath(sourceSets, main);
 
-                main.setRuntimeClasspath(mainRuntime.minus(output));
-            }
-
-            // exclude main outputs in the classpath of the run config
-            Set<File> mainOutputFiles = main.getOutput().getFiles();
-            fixIdeaRunClasspath.get().getClasspathExcludes().from(mainOutputFiles);
-
-            // configure plugin file paths of the target project
-            ext.getPluginPaths().from(mainOutputFiles);
+            removePluginOutputFromRunConfigs(sourceSets, ext, fixIdeaRunClasspath);
         });
 
         // configure run game tasks to contain paths to plugin sources
@@ -114,16 +96,11 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
         });
 
         GradleUtils.afterSuccessfulEvaluation(target, () -> {
-            // collect configured plugin paths and configure the kibu config task
-            KibuDevConfigTask kibuDevConfigTask = generateKibuDevConfig.get();
-            ConfigurableFileCollection pluginPaths = kibuDevConfigTask.getPluginPaths();
+            removePluginDependenciesFromGradleMainClasspath(ext, sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME).get());
 
-            ext.getPluginPaths().getFiles().stream()
-                    .map(File::getAbsolutePath)
-                    .forEach(pluginPaths::from);
+            removePluginDependenciesFromRunConfigs(ext, fixIdeaRunClasspath);
 
-            // collected plugin dependencies and configure kibu config task
-            kibuDevConfigTask.getPluginDependencies().from(ext.getPluginDependencies());
+            configureKibuDevConfigTask(ext, generateKibuDevConfig);
 
             // gather run configs (must be done after project evaluation, as minecraftJarConfiguration is set during it
             final LoomGradleExtension extension = LoomGradleExtension.get(target);
@@ -153,5 +130,56 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
             tasks.withType(Jar.class).configureEach(task ->
                     task.manifest(manifest -> manifest.attributes(Map.of("Fabric-Loom-Remap", "true"))));
         });
+    }
+
+    private static void configureKibuDevConfigTask(KibuGradleExtension ext, TaskProvider<KibuDevConfigTask> generateKibuDevConfig) {
+        // collect configured plugin paths and configure the kibu config task
+        KibuDevConfigTask kibuDevConfigTask = generateKibuDevConfig.get();
+        ConfigurableFileCollection pluginPaths = kibuDevConfigTask.getPluginPaths();
+
+        ext.getPluginPaths().getFiles().stream()
+                .map(File::getAbsolutePath)
+                .forEach(pluginPaths::from);
+
+        kibuDevConfigTask.getPluginDependencies().from(ext.getPluginDependencies());
+    }
+
+    private static void removePluginOutputFromRunConfigs(SourceSetContainer sourceSets, KibuGradleExtension ext, TaskProvider<FixIdeaRunConfigsTask> fixIdeaRunClasspath) {
+        // exclude sourceSet outputs in the classpath of the run config
+        Set<File> files = new HashSet<>();
+
+        for (SourceSet sourceSet : sourceSets) {
+            if (SourceSet.TEST_SOURCE_SET_NAME.equals(sourceSet.getName())) continue;
+
+            files.addAll(sourceSet.getOutput().getFiles());
+        }
+
+        fixIdeaRunClasspath.configure(task -> task.getClasspathExcludes().from(files));
+
+        // configure plugin file paths of the target project
+        ext.getPluginPaths().from(files);
+    }
+
+    private static void removePluginOutputFromGradleMainClasspath(SourceSetContainer sourceSets, SourceSet main) {
+        // remove all sourceSet outputs from the main runtime classpath
+        // the outputs will be loaded by the plugin loader instead
+        for (SourceSet sourceSet : sourceSets) {
+            FileCollection mainRuntime = main.getRuntimeClasspath();
+            SourceSetOutput output = sourceSet.getOutput();
+
+            main.setRuntimeClasspath(mainRuntime.minus(output));
+        }
+    }
+
+    private static void removePluginDependenciesFromRunConfigs(KibuGradleExtension ext, TaskProvider<FixIdeaRunConfigsTask> fixIdeaRunClasspath) {
+        var pluginDependencies = ext.getPluginDependencies();
+
+        fixIdeaRunClasspath.configure(task -> task.getClasspathExcludes().from(pluginDependencies));
+    }
+
+    private static void removePluginDependenciesFromGradleMainClasspath(KibuGradleExtension ext, SourceSet main) {
+        var pluginDependencies = ext.getPluginDependencies();
+
+        main.setRuntimeClasspath(main.getRuntimeClasspath().minus(pluginDependencies));
     }
 }

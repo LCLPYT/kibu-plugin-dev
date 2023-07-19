@@ -18,6 +18,8 @@ public class KibuGradleExtensionImpl implements KibuGradleExtension {
     private final ConfigurableFileCollection pluginPaths;
     private final Property<String> appBundleName;
     private final Set<Configuration> pluginConfigurations = new HashSet<>();
+    private final Object dependencyMutex = new Object();
+    private ConfigurableFileCollection pluginDependencies = null;
 
     public KibuGradleExtensionImpl(Project project) {
         this.project = project;
@@ -44,10 +46,40 @@ public class KibuGradleExtensionImpl implements KibuGradleExtension {
 
     @Override
     public ConfigurableFileCollection getPluginDependencies() {
+        if (pluginDependencies != null) return pluginDependencies;
+
+        synchronized (dependencyMutex) {
+            if (pluginDependencies != null) return pluginDependencies;
+
+            pluginDependencies = collectPluginDependencies();
+
+            return pluginDependencies;
+        }
+    }
+
+    private ConfigurableFileCollection collectPluginDependencies() {
         var collection = project.getObjects().fileCollection();
         final PluginDetector pluginDetector = new PluginDetector(project.getLogger());
 
         for (Configuration configuration : pluginConfigurations) {
+            Set<File> files = configuration.resolve();
+
+            for (File file : files) {
+                if (pluginDetector.isNonMappedPlugin(file.toPath())) {
+                    collection.from(file);
+                }
+            }
+        }
+
+        Set<Configuration> mappedConfigurations = new HashSet<>();
+
+        Configuration modRuntimeClasspathMainMapped = project.getConfigurations().findByName("modRuntimeClasspathMainMapped");
+
+        if (modRuntimeClasspathMainMapped != null) {
+            mappedConfigurations.add(modRuntimeClasspathMainMapped);
+        }
+
+        for (Configuration configuration : mappedConfigurations) {
             Set<File> files = configuration.resolve();
 
             for (File file : files) {
