@@ -79,13 +79,7 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
             task.systemProperty("kibu-dev.config", kibuDevConfig.get().getAsFile().getAbsolutePath());
         });
 
-        sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME).configure(main -> {
-            ext.createPluginConfigurations(main);
-
-            removePluginOutputFromGradleMainClasspath(sourceSets, main);
-
-            removePluginOutputFromRunConfigs(sourceSets, ext, fixIdeaRunClasspath);
-        });
+        sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME).configure(ext::createPluginConfigurations);
 
         // configure run game tasks to contain paths to plugin sources
         tasks.withType(RunGameTask.class).forEach(task -> {
@@ -96,8 +90,12 @@ public class KibuLoomGradlePlugin implements Plugin<Project> {
         });
 
         GradleUtils.afterSuccessfulEvaluation(target, () -> {
-            removePluginDependenciesFromGradleMainClasspath(ext, sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME).get());
+            SourceSet main = sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME).get();
 
+            removePluginOutputFromGradleMainClasspath(sourceSets, main);
+            removePluginOutputFromRunConfigs(sourceSets, ext, fixIdeaRunClasspath);
+
+            removePluginDependenciesFromGradleMainClasspath(ext, main);
             removePluginDependenciesFromRunConfigs(ext, fixIdeaRunClasspath);
 
             configureKibuDevConfigTask(ext, generateKibuDevConfig);
