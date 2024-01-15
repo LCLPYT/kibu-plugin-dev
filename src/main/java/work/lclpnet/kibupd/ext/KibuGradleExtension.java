@@ -1,5 +1,6 @@
 package work.lclpnet.kibupd.ext;
 
+import org.gradle.api.component.AdhocComponentWithVariants;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.SourceSet;
@@ -18,4 +19,8 @@ public interface KibuGradleExtension {
      * @return A collection of plugin jars from all plugin configurations.
      */
     ConfigurableFileCollection getPluginDependencies();
+
+    AdhocComponentWithVariants getSoftwareComponent();
+
+    void addComponentArtifact(Object artifact);
 }

@@ -2,9 +2,13 @@ package work.lclpnet.kibupd.ext;
 
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.component.AdhocComponentWithVariants;
+import org.gradle.api.component.SoftwareComponentFactory;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.SourceSet;
+import work.lclpnet.kibupd.KibuGradlePlugin;
+import work.lclpnet.kibupd.component.KibuSoftwareComponentHelper;
 import work.lclpnet.kibupd.util.KibuPluginConfigurations;
 import work.lclpnet.kibupd.util.PluginDetector;
 
@@ -17,14 +21,19 @@ public class KibuGradleExtensionImpl implements KibuGradleExtension {
     private final Project project;
     private final ConfigurableFileCollection pluginPaths;
     private final Property<String> appBundleName;
+    private final SoftwareComponentFactory componentFactory;
     private final Set<Configuration> pluginConfigurations = new HashSet<>();
     private final Object dependencyMutex = new Object();
+    private final KibuSoftwareComponentHelper componentHelper;
     private ConfigurableFileCollection pluginDependencies = null;
 
-    public KibuGradleExtensionImpl(Project project) {
+    public KibuGradleExtensionImpl(Project project, SoftwareComponentFactory componentFactory) {
         this.project = project;
         this.pluginPaths = project.getObjects().fileCollection();
         this.appBundleName = project.getObjects().property(String.class).convention(project.getName());
+        this.componentFactory = componentFactory;
+        this.componentHelper = new KibuSoftwareComponentHelper(project, componentFactory,
+                KibuGradlePlugin.KIBU_COMPONENT_NAME, KibuGradlePlugin.KIBU_ARTIFACTS_CONFIGURATION_NAME);
     }
 
     @Override
@@ -55,6 +64,16 @@ public class KibuGradleExtensionImpl implements KibuGradleExtension {
 
             return pluginDependencies;
         }
+    }
+
+    @Override
+    public AdhocComponentWithVariants getSoftwareComponent() {
+        return componentHelper.getComponent();
+    }
+
+    @Override
+    public void addComponentArtifact(Object artifact) {
+        componentHelper.addArtifact(artifact);
     }
 
     private ConfigurableFileCollection collectPluginDependencies() {

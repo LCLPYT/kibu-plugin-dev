@@ -4,7 +4,7 @@ plugins {
     id("java")
     id("java-gradle-plugin")
     id("maven-publish")
-    id("gradle-build-utils").version("1.5.3")
+    id("gradle-build-utils").version("1.7.0")
 }
 
 repositories {
