@@ -22,5 +22,7 @@ public interface KibuGradleExtension {
 
     AdhocComponentWithVariants getSoftwareComponent();
 
-    void addComponentArtifact(Object artifact);
+    void addArtifact(Object artifact);
+
+    void addSourceArtifact(Object artifact);
 }

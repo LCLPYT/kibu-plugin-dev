@@ -21,7 +21,6 @@ public class KibuGradleExtensionImpl implements KibuGradleExtension {
     private final Project project;
     private final ConfigurableFileCollection pluginPaths;
     private final Property<String> appBundleName;
-    private final SoftwareComponentFactory componentFactory;
     private final Set<Configuration> pluginConfigurations = new HashSet<>();
     private final Object dependencyMutex = new Object();
     private final KibuSoftwareComponentHelper componentHelper;
@@ -31,9 +30,8 @@ public class KibuGradleExtensionImpl implements KibuGradleExtension {
         this.project = project;
         this.pluginPaths = project.getObjects().fileCollection();
         this.appBundleName = project.getObjects().property(String.class).convention(project.getName());
-        this.componentFactory = componentFactory;
         this.componentHelper = new KibuSoftwareComponentHelper(project, componentFactory,
-                KibuGradlePlugin.KIBU_COMPONENT_NAME, KibuGradlePlugin.KIBU_ARTIFACTS_CONFIGURATION_NAME);
+                KibuGradlePlugin.KIBU_COMPONENT_NAME);
     }
 
     @Override
@@ -72,8 +70,13 @@ public class KibuGradleExtensionImpl implements KibuGradleExtension {
     }
 
     @Override
-    public void addComponentArtifact(Object artifact) {
+    public void addArtifact(Object artifact) {
         componentHelper.addArtifact(artifact);
+    }
+
+    @Override
+    public void addSourceArtifact(Object artifact) {
+        componentHelper.addSourceArtifact(artifact);
     }
 
     private ConfigurableFileCollection collectPluginDependencies() {

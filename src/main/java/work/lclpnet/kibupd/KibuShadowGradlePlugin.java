@@ -9,7 +9,6 @@ import net.fabricmc.loom.util.Constants;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.component.SoftwareComponentFactory;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.tasks.TaskContainer;
 import org.gradle.api.tasks.bundling.AbstractArchiveTask;
@@ -17,7 +16,6 @@ import work.lclpnet.kibupd.ext.KibuGradleExtension;
 import work.lclpnet.kibupd.util.ProjectUtils;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
 import java.io.File;
 import java.util.Collections;
 
@@ -27,13 +25,6 @@ public class KibuShadowGradlePlugin implements Plugin<Project> {
     public static final String PROVIDE_CONFIGURATION_NAME = "provide";
     public static final String REMAP_SHADOW_JAR_TASK_NAME = "remapShadowJar";
     public static final String REMAP_RELOCATE_DEPS_TASK_NAME = "relocateDeps";
-
-    private final SoftwareComponentFactory componentFactory;
-
-    @Inject
-    public KibuShadowGradlePlugin(SoftwareComponentFactory componentFactory) {
-        this.componentFactory = componentFactory;
-    }
 
     @Override
     public void apply(Project target) {
@@ -75,8 +66,9 @@ public class KibuShadowGradlePlugin implements Plugin<Project> {
             task.getInputFile().convention(shadowJarTask.getArchiveFile());
         });
 
-        ext.addComponentArtifact(remapShadowJarTask);
-        tasks.named("remapSourcesJar").configure(ext::addComponentArtifact);
+        ext.addArtifact(remapShadowJarTask);
+
+        tasks.named("remapSourcesJar").configure(ext::addSourceArtifact);
 
         ProjectUtils.onEvaluationSuccess(target, () -> {
             String escaped = getNameAsPackage(ext.getAppBundleName().get());

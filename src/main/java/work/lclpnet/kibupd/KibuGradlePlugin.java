@@ -22,7 +22,6 @@ public class KibuGradlePlugin implements Plugin<Project> {
     public static final String SHADOW_PLUGIN_ID = "com.github.johnrengelman.shadow";
     public static final String LOOM_PLUGIN_ID = "fabric-loom";
     public static final String KIBU_COMPONENT_NAME = "kibu";
-    public static final String KIBU_ARTIFACTS_CONFIGURATION_NAME = "kibuArtifacts";
 
     private Properties properties;
 
