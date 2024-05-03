@@ -1,7 +1,6 @@
 package work.lclpnet.kibupd;
 
 import com.github.jengelman.gradle.plugins.shadow.ShadowJavaPlugin;
-import com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation;
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar;
 import net.fabricmc.loom.task.RemapJarTask;
 import net.fabricmc.loom.task.RemapTaskConfiguration;
@@ -24,7 +23,6 @@ public class KibuShadowGradlePlugin implements Plugin<Project> {
     public static final String BUNDLE_CONFIGURATION_NAME = "bundle";
     public static final String PROVIDE_CONFIGURATION_NAME = "provide";
     public static final String REMAP_SHADOW_JAR_TASK_NAME = "remapShadowJar";
-    public static final String REMAP_RELOCATE_DEPS_TASK_NAME = "relocateDeps";
 
     @Override
     public void apply(Project target) {
@@ -35,21 +33,12 @@ public class KibuShadowGradlePlugin implements Plugin<Project> {
 
         TaskContainer tasks = target.getTasks();
 
-        // add relocateDeps task
-        ConfigureShadowRelocation relocateDepsTask = tasks.create(REMAP_RELOCATE_DEPS_TASK_NAME, ConfigureShadowRelocation.class, task -> {
-            task.setGroup("shadow");
-
-            ShadowJar shadowJar = tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME, ShadowJar.class).get();
-            task.setTarget(shadowJar);
-        });
-
         // configure shadowJar task
         File devlibsDir = new File(target.getBuildDir(), "devlibs");
         tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME, ShadowJar.class).configure(task -> {
             task.setConfigurations(Collections.singletonList(bundle));
             task.getArchiveClassifier().set("dev-bundle");
             task.getDestinationDirectory().set(devlibsDir);
-            task.dependsOn(relocateDepsTask);
 
             task.from(provide);
         });
@@ -72,7 +61,11 @@ public class KibuShadowGradlePlugin implements Plugin<Project> {
 
         ProjectUtils.onEvaluationSuccess(target, () -> {
             String escaped = getNameAsPackage(ext.getAppBundleName().get());
-            relocateDepsTask.setPrefix(escaped);
+
+            tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME, ShadowJar.class).configure(task -> {
+                task.setEnableRelocation(true);
+                task.setRelocationPrefix(escaped);
+            });
 
             if (bundle.isEmpty() && provide.isEmpty()) {
                 remapShadowJarTask.setEnabled(false);
