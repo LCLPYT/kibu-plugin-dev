@@ -7,6 +7,7 @@ import net.fabricmc.loom.task.RemapTaskConfiguration;
 import net.fabricmc.loom.util.Constants;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.plugins.BasePlugin;
 import org.gradle.api.tasks.TaskContainer;
@@ -35,6 +36,7 @@ public class KibuShadowGradlePlugin implements Plugin<Project> {
 
         // configure shadowJar task
         File devlibsDir = new File(target.getBuildDir(), "devlibs");
+
         tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME, ShadowJar.class).configure(task -> {
             task.setConfigurations(Collections.singletonList(bundle));
             task.getArchiveClassifier().set("dev-bundle");
@@ -57,31 +59,51 @@ public class KibuShadowGradlePlugin implements Plugin<Project> {
 
         ext.addArtifact(remapShadowJarTask);
 
-        tasks.named("remapSourcesJar").configure(ext::addSourceArtifact);
-
         ProjectUtils.onEvaluationSuccess(target, () -> {
-            String escaped = getNameAsPackage(ext.getAppBundleName().get());
+            configureShadowJar(ext, tasks, remapShadowJarTask, bundle, provide, devlibsDir);
+            configureSourceArtifacts(tasks, ext);
+        });
+    }
 
-            tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME, ShadowJar.class).configure(task -> {
-                task.setEnableRelocation(true);
-                task.setRelocationPrefix(escaped);
-            });
+    private void configureShadowJar(KibuGradleExtension ext, TaskContainer tasks, RemapJarTask remapShadowJarTask,
+                                    Configuration bundle, Configuration provide, File devlibsDir) {
 
-            if (bundle.isEmpty() && provide.isEmpty()) {
-                remapShadowJarTask.setEnabled(false);
-                tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME, AbstractArchiveTask.class).configure(task -> task.setEnabled(false));
-            } else {
-                tasks.named(BasePlugin.ASSEMBLE_TASK_NAME).configure(task -> task.dependsOn(remapShadowJarTask));
+        String escaped = getNameAsPackage(ext.getAppBundleName().get());
 
-                // adjust archive classifiers
-                tasks.named(RemapTaskConfiguration.REMAP_JAR_TASK_NAME, AbstractArchiveTask.class).configure(task -> {
+        tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME, ShadowJar.class).configure(task -> {
+            task.setEnableRelocation(true);
+            task.setRelocationPrefix(escaped);
+        });
+
+        if (bundle.isEmpty() && provide.isEmpty()) {
+            remapShadowJarTask.setEnabled(false);
+
+            tasks.named(ShadowJavaPlugin.SHADOW_JAR_TASK_NAME, AbstractArchiveTask.class)
+                    .configure(task -> task.setEnabled(false));
+
+            return;
+        }
+
+        tasks.named(BasePlugin.ASSEMBLE_TASK_NAME)
+                .configure(task -> task.dependsOn(remapShadowJarTask));
+
+        // adjust archive classifiers
+        tasks.named(RemapTaskConfiguration.REMAP_JAR_TASK_NAME, AbstractArchiveTask.class)
+                .configure(task -> {
                     task.getArchiveClassifier().convention("slim");
                     task.getDestinationDirectory().set(devlibsDir);
                 });
 
-                tasks.named(REMAP_SHADOW_JAR_TASK_NAME, AbstractArchiveTask.class).configure(task -> task.getArchiveClassifier().convention(""));
-            }
-        });
+        tasks.named(REMAP_SHADOW_JAR_TASK_NAME, AbstractArchiveTask.class)
+                .configure(task -> task.getArchiveClassifier().convention(""));
+    }
+
+    private void configureSourceArtifacts(TaskContainer tasks, KibuGradleExtension ext) {
+        Task remapSourcesJar = tasks.named("remapSourcesJar").getOrNull();
+
+        if (remapSourcesJar != null) {
+            ext.addSourceArtifact(remapSourcesJar);
+        }
     }
 
     private static String getNameAsPackage(@Nullable String name) {
